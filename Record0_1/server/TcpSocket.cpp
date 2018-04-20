@@ -45,7 +45,7 @@ TcpSocket::~TcpSocket()
 
 }
 
-int TcpSocket::start()
+int TcpSocket::getClient()
 { 
     bzero(&m_accept_addr, sizeof(m_accept_addr));
     if((m_accept_socket = accept(m_server_socket, (struct sockaddr *)&m_accept_addr, &m_socketlen)) < 0)

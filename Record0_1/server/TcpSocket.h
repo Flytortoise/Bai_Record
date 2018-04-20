@@ -8,7 +8,7 @@ class TcpSocket
 public:
     TcpSocket(int port, const char *ip);
 	~TcpSocket();
-    int start();
+    int getClient();
 
 private:
 	int m_server_socket;

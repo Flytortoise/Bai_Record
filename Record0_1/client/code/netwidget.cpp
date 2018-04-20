@@ -4,12 +4,16 @@
 #include <QGridLayout>
 #include <QByteArray>
 #include <QMessageBox>
+#include <QFileDialog>
+#include <QDebug>
 
+const qint64 LOADBYTES = 1024;  //每次发送的大小
 NetWidget::NetWidget(QWidget *parent) : QWidget(parent)
 {
     this->setWindowTitle(tr("网络连接"));
     CreateInit();
     CreateLayout();
+    this->setFixedSize(QWidget::sizeHint());
 }
 
 void NetWidget::CreateInit()
@@ -38,8 +42,6 @@ void NetWidget::CreateInit()
         ClientSocket->connectToHost(IPLineEdit->text(),
                                     PortLineEdit->text().toInt());
         ConnectBtn->setEnabled(false);
-        DisConnectBtn->setEnabled(true);
-        SendBtn->setEnabled(true);
     });
 
     DisConnectBtn = new QPushButton(tr("断开连接"));
@@ -49,26 +51,45 @@ void NetWidget::CreateInit()
         ClientSocket->close();
         ConnectBtn->setEnabled(true);
         DisConnectBtn->setEnabled(false);
-        SendBtn->setEnabled(false);
+        SendFileBtn->setEnabled(false);
     });
 
-    SendLineEdit = new QLineEdit;
-    RecvLineEdit = new QLineEdit;
-    SendBtn = new QPushButton(tr("发送信息"));
-    SendBtn->setEnabled(false);
-    connect(SendBtn, &QPushButton::clicked,
-            [this](){
-        ClientSocket->write(SendLineEdit->text().toStdString().data());
-    });
+    FilePathLabel = new QLabel;
+    SendProgressBar = new QProgressBar;
+    SendProgressBar->setMinimum(0);
 
-    connect(ClientSocket, &QTcpSocket::readyRead,
+    SendFileBtn = new QPushButton(tr("发送文件"));
+    SendFileBtn->setEnabled(false);
+    connect(SendFileBtn, SIGNAL(clicked(bool)),
+            this, SLOT(SendFileName()));
+
+    SelectFileBtn = new QPushButton(tr("选择文件"));
+    connect(SelectFileBtn, &QPushButton::clicked,
             [this](){
-        QByteArray data = ClientSocket->readAll();
-        RecvLineEdit->setText(data.toStdString().data());
+        FilePathName = QFileDialog::getOpenFileName(this);
+        if(!FilePathName.isEmpty())
+        {
+            FilePathLabel->setText(FilePathName);
+            SendProgressBar->setValue(0);
+        }
     });
 
     connect(ClientSocket, SIGNAL(error(QAbstractSocket::SocketError)),
             this, SLOT(showError(QAbstractSocket::SocketError)));
+
+    connect(ClientSocket, &QTcpSocket::connected,
+            [this](){
+        ConnectBtn->setEnabled(false);
+        DisConnectBtn->setEnabled(true);
+        SendFileBtn->setEnabled(true);
+    });
+
+    //发送第一个数据包之后，QTcpSocket会发出这个信号
+    connect(ClientSocket, SIGNAL(bytesWritten(qint64)),
+            this, SLOT(SendFileData(qint64)));
+
+    file = nullptr;
+    loadBytes = LOADBYTES;
 }
 
 void NetWidget::CreateLayout()
@@ -85,19 +106,85 @@ void NetWidget::CreateLayout()
     mainLayout->addWidget(ConnectBtn, 1, 0, 1, 2);
     mainLayout->addWidget(DisConnectBtn, 1, 2, 1, 2);
 
-    mainLayout->addWidget(SendLineEdit, 2, 0, 1, 3);
-    mainLayout->addWidget(SendBtn, 2, 3);
-    mainLayout->addWidget(RecvLineEdit, 3, 0, 1, 3);
+    mainLayout->addWidget(FilePathLabel, 2, 0, 1, 3);
+    mainLayout->addWidget(SelectFileBtn, 2, 3);
+    mainLayout->addWidget(SendProgressBar, 3, 0, 1, 3);
+    mainLayout->addWidget(SendFileBtn, 3, 3);
 }
 
-void NetWidget::showError(QAbstractSocket::SocketError error)
+void NetWidget::showError(QAbstractSocket::SocketError )
 {
     QString strErr = ClientSocket->errorString();
     QMessageBox::critical(this,tr("网络错误"),
                           tr("产生如下错误:%1").arg(strErr));
     ConnectBtn->setEnabled(true);
     DisConnectBtn->setEnabled(false);
-    SendBtn->setEnabled(false);
+    SendFileBtn->setEnabled(false);
+    ClientSocket->close();
+}
+
+void NetWidget::SendFileName()
+{
+    if(FilePathName.isEmpty())
+    {
+        QMessageBox::critical(this, tr("文件错误"),
+                              tr("未指定文件!"), Qt::NoButton, Qt::NoButton);
+        return;
+    }
+
+    if(file != nullptr)
+        delete file;
+
+    file = new QFile(FilePathName);
+    if(!file->open(QFile::ReadOnly))
+    {
+        QMessageBox::critical(this, tr("文件错误"),
+                              tr("文件打开失败！"), Qt::NoButton, Qt::NoButton);
+        return;
+    }
+
+    sentBytes = 0;
+    fileBytes = file->size();
+    SendProgressBar->setValue(0);
+    QByteArray buff;
+    QDataStream out(&buff, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_5_8);
+
+    //无路径文件名
+    QString fileName = FilePathName.right(FilePathName.size() -
+                                   FilePathName.lastIndexOf('/') - 1);
+    //数据包 = 总大小+文件名长度+文件名，先占位
+    out << qint64(0) << qint64(0) << fileName;
+
+    fileBytes += buff.size();
+    SendProgressBar->setMaximum(fileBytes);
+
+    out.device()->seek(0);  //重写总大小和文件名长度
+    out << fileBytes << (qint64(buff.size()) - 2 * sizeof(qint64)); //减掉两个qint64
+    restBytes = fileBytes - ClientSocket->write(buff);  //发送数据包
+   /*
+    qDebug() << fileBytes;
+    qDebug() << (qint64(buff.size()) - 2 * sizeof(qint64));
+    qDebug() << fileName;
+    qDebug() << buff.toHex();
+    */
+
+}
+
+void NetWidget::SendFileData(qint64 sentSize)
+{
+
+    sentBytes += sentSize;
+    SendProgressBar->setValue(sentBytes);
+
+    if(restBytes > 0)
+    {
+        QByteArray buff = file->read(qMin(loadBytes, restBytes));
+        restBytes -= ClientSocket->write(buff);
+    }
+    else
+        file->close();
+
 }
 
 
