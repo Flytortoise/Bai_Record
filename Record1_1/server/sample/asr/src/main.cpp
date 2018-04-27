@@ -21,6 +21,8 @@ void * Work(void *data)
 
         string filename = filehandle.GetFileName();
         string result = Translate(filename.c_str());
+		if(result.empty())
+		    result = " ";
         //cout << "result:" << endl << result << endl;
         send(client, result.c_str(), result.size(), 0);
 
@@ -47,7 +49,7 @@ int main(int argc, char const *argv[])
     }
 */
 	cout << "Server Start ..." << endl;
-    TcpSocket server(8000, "192.168.10.134");
+    TcpSocket server(8000, "172.16.252.189");
 
     while(1)
     {
