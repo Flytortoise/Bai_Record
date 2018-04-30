@@ -11,10 +11,13 @@ class FileHandle
 {
 public :
 	FileHandle(int socket);
-	int64 Str2Int(char *str);
-	string GetFileName(char *filename, int64 size);
-	string GetFileName();
-	bool FileTransmit();
+	int64 Str2Int(char *str);		//获取总大小，文件名大小
+	string GetFileName();			//获取文件名
+	bool FileTransmit();			//获取音频文件
+
+private:
+	string GetFileName(char *filename, int64 size);	//获取文件名
+
 
 private :
 	int m_socket;

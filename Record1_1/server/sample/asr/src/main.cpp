@@ -8,6 +8,7 @@
 #include "Translate.h"
 
 using namespace std;
+pthread_mutex_t thread_mutexes;
 
 void * Work(void *data)
 {
@@ -15,16 +16,19 @@ void * Work(void *data)
     int client = *((int *)data);
     while(1)
     {
-        FileHandle filehandle(client);
-        if(!filehandle.FileTransmit())
+        FileHandle filehandle(client);      
+        if(!filehandle.FileTransmit())  //接收文件
             break;  
 
-        string filename = filehandle.GetFileName();
-        string result = Translate(filename.c_str());
+        string filename = filehandle.GetFileName();     //获取文件名
+
+        pthread_mutex_lock(&thread_mutexes);
+        string result = Translate(filename.c_str());    //翻译音频文件
+        pthread_mutex_unlock(&thread_mutexes);
 		if(result.empty())
 		    result = " ";
         //cout << "result:" << endl << result << endl;
-        send(client, result.c_str(), result.size(), 0);
+        send(client, result.c_str(), result.size(), 0);     //发送结果
 
     }   
 

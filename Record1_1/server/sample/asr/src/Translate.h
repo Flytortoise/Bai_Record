@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-std::string Translate(const char *filename);
+std::string Translate(const char *filename);	//翻译音频文件
 
 
 

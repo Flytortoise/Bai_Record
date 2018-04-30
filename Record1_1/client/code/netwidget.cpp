@@ -9,6 +9,8 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QApplication>
+
 
 const qint64 LOADBYTES = 1024;  //每次发送的大小
 NetWidget::NetWidget(QWidget *parent) : QWidget(parent)
@@ -102,6 +104,14 @@ void NetWidget::CreateInit()
     font.setPointSize(12);
     resultTextEdit->setFont(font);
     resultTextEdit->setReadOnly(true);
+
+    _ClearWav = new QPushButton(tr("清除音频缓存"));
+    connect(_ClearWav, &QPushButton::clicked,
+            [this](){
+       QString order = QString("%1/*").arg(qApp->applicationDirPath()+QString("/wav"));
+       order = QString("del /q/f ") + order.replace("/","\\");
+       system(order.toStdString().c_str());
+    });
 }
 
 void NetWidget::CreateLayout()
@@ -124,6 +134,7 @@ void NetWidget::CreateLayout()
     mainLayout->addWidget(SendFileBtn, 3, 3);
 
     mainLayout->addWidget(resultTextEdit, 4, 0, 1, 4);
+    mainLayout->addWidget(_ClearWav, 5, 3);
 }
 
 void NetWidget::showError(QAbstractSocket::SocketError )
@@ -232,7 +243,7 @@ void NetWidget::RecvMessage()
         QMessageBox::critical(this, tr("接受错误！"), json_error.errorString());
     }
 
-    emit RecvReady();
+    //emit RecvReady();
     GetResult();
 
     SendFileBtn->setEnabled(true);

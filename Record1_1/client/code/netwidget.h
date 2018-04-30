@@ -16,18 +16,18 @@ class NetWidget : public QWidget
     Q_OBJECT
 public:
     explicit NetWidget(QWidget *parent = 0);
-    QString GetResult();
-    void CloseConnect();
+    QString GetResult();    //展示服务器发来的结果
+    void CloseConnect();    //界面关闭时，关闭连接
 
 signals:
-    void RecvReady();
+    //void RecvReady();
 
 public slots:
-    void showError(QAbstractSocket::SocketError);
-    void SendFileName();
-    void SendFileData(qint64);
-    void RecvMessage();
-    void GetRecord(QString fileName);
+    void showError(QAbstractSocket::SocketError);   //展示错误
+    void SendFileName();            //发送文件名
+    void SendFileData(qint64);      //发送文件
+    void RecvMessage();             //接受服务器发来的结果
+    void GetRecord(QString fileName);   //录音结束，自动发送该音频文件
 
 private:
     void CreateInit();
@@ -43,7 +43,7 @@ private:
     QPushButton *ConnectBtn;
     QPushButton *DisConnectBtn;
 
-    QTcpSocket *ClientSocket;
+    QTcpSocket *ClientSocket;       //socket
 
     QLabel *FilePathLabel;
     QProgressBar *SendProgressBar;
@@ -59,6 +59,7 @@ private:
     QString raw_text;
 
     QTextEdit *resultTextEdit;
+    QPushButton *_ClearWav;     //清除wav文件夹中的录音文件
 };
 
 #endif // NETWIDGET_H

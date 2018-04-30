@@ -14,7 +14,7 @@ public:
     explicit RecordWidget(QWidget *parent = 0);
     ~RecordWidget();
 signals:
-    void RecordOk(QString fileName);
+    void RecordOk(QString fileName);        //录音结束发送该信号，通知netwidget自动发送音频文件
 public slots:
 
 private:
