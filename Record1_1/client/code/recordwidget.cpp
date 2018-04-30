@@ -70,11 +70,8 @@ void RecordWidget::CreateInit()
                 _startBtn->setEnabled(false);
                 _endBtn->setEnabled(true);
              #ifdef TOFILE //存到文件
-                QString fileName = QString("./%1-%2.wav").arg(
-                    QDateTime::currentDateTime().toString("yyyy-MM-dd"),
-                    QTime::currentTime().toString("hh-mm-ss"));
 
-                outFile.setFileName(qApp->applicationDirPath() + fileName); //语音原始文件
+                outFile.setFileName(qApp->applicationDirPath() + QString("/test.wav")); //语音原始文件
                 outFile.open(QIODevice::WriteOnly | QIODevice::Truncate);
                 _audioInput->start(&outFile);
                 if(!flag)
